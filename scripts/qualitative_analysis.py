@@ -235,14 +235,22 @@ def map_root_causes(
     proxy_features: list[dict],
     group_breakdown: pd.DataFrame,
     threshold: float = 0.8,
-) -> dict[str, list[str]]:
+) -> dict[str, list]:
     """
     Deterministic rule engine: examine metric patterns, imbalance, and
     proxy features to produce root-cause hypotheses and mitigation
     recommendations.
+
+    Returns:
+        causes: plain-language root cause statements
+        fixes: AIF360-style mitigation recommendations, ordered by intervention stage
+        governance: monitoring and audit recommendations (always present)
+        confidence: assessment confidence — HIGH / MEDIUM / LOW
+        cause_fix_mapping: list of {cause_index, cause_summary, fix_summary, stage}
     """
     causes: list[str] = []
     fixes: list[str] = []
+    cause_fix_mapping: list[dict] = []
 
     di_val = di if di is not None else 1.0
     dpd_val = dpd if dpd is not None else 0.0
@@ -253,97 +261,119 @@ def map_root_causes(
     is_borderline = threshold <= di_val < 0.95
     is_fair = di_val >= 0.95
 
+    def _add(cause: str, fix: str, stage: str = "pre-processing") -> None:
+        idx = len(causes) + 1
+        causes.append(cause)
+        fixes.append(fix)
+        cause_fix_mapping.append({
+            "cause_index": idx,
+            "cause_summary": cause[:120],
+            "fix_summary": fix[:120],
+            "stage": stage,
+        })
+
     # ── cause: historical / label bias ─────────────────────────────
     base_rates = group_breakdown.dropna(subset=["base_rate"])
     if len(base_rates) >= 2:
         br_gap = base_rates["base_rate"].max() - base_rates["base_rate"].min()
         if br_gap > 0.10:
-            causes.append(
+            _add(
                 "Historical / label bias: the ground-truth labels themselves "
                 "show a significant disparity across groups. The model is "
                 "learning to replicate outcomes that may embed past "
-                "discriminatory decisions."
-            )
-            fixes.append(
+                "discriminatory decisions.",
                 "Pre-processing -- Reweighing (aif360.algorithms.preprocessing.Reweighing): "
                 "assign sample weights that compensate for historical label "
-                "imbalance across groups before training."
+                "imbalance across groups before training. Schedule quarterly "
+                "weight recalibration as data distributions evolve.",
+                stage="pre-processing",
             )
 
     # ── cause: proxy features ──────────────────────────────────────
     strong_proxies = [p for p in proxy_features if p["strength"] in ("strong", "moderate")]
     if strong_proxies:
         names = ", ".join(f"{p['feature']} (r={p['correlation']})" for p in strong_proxies[:5])
-        causes.append(
+        _add(
             f"Proxy discrimination: features that correlate with the protected "
             f"attribute allow the model to indirectly discriminate even without "
-            f"direct access to the attribute. Proxy features detected: {names}."
-        )
-        fixes.append(
+            f"direct access to the attribute. Proxy features detected: {names}.",
             "Pre-processing -- Disparate Impact Remover "
             "(aif360.algorithms.preprocessing.DisparateImpactRemover): "
             "transform feature distributions to reduce correlation with the "
-            "protected attribute while preserving rank-ordering."
+            "protected attribute while preserving rank-ordering. Set repair_level "
+            "between 0.8 and 1.0 and validate that prediction accuracy remains "
+            "within acceptable bounds on a held-out validation split.",
+            stage="pre-processing",
         )
 
     # ── cause: data imbalance ──────────────────────────────────────
     if any("Severe" in f or "fewer than" in f for f in imbalance_findings):
-        causes.append(
+        _add(
             "Representation bias: severely underrepresented groups make the "
             "model less reliable for those populations and can amplify "
-            "existing disparities."
-        )
-        fixes.append(
+            "existing disparities.",
             "Data collection: gather more samples from underrepresented "
-            "groups. In the interim, use class-weighted training "
-            "(class_weight='balanced' in scikit-learn) to upweight "
-            "minority-group errors."
+            "groups targeting n >= 100 per group. In the interim, apply "
+            "class-weighted training (class_weight='balanced' in scikit-learn) "
+            "to upweight minority-group errors. Track group-specific model "
+            "performance metrics monthly until representation targets are met.",
+            stage="data-collection",
         )
 
     # ── cause: unequal error rates ─────────────────────────────────
     if abs(eod_val) > 0.05:
         direction = "under-predicting favorable outcomes" if eod_val < 0 else "over-predicting favorable outcomes"
-        causes.append(
+        _add(
             f"Unequal opportunity: the model is {direction} for the "
             f"unprivileged group (EOD = {eod_val:+.4f}). Deserving members "
             f"of the unprivileged group are disproportionately missed or "
-            f"incorrectly classified."
-        )
-        fixes.append(
+            f"incorrectly classified.",
             "In-processing -- Prejudice Remover "
             "(aif360.algorithms.inprocessing.PrejudiceRemover): "
-            "add a fairness regularization term during model training "
-            "that penalizes dependence on the protected attribute."
+            "add a fairness regularization term (eta parameter) during model "
+            "training that penalizes dependence on the protected attribute. "
+            "Implement cross-validation over eta in {0.1, 1.0, 10.0} and "
+            "monitor EOD on a held-out fairness validation set.",
+            stage="in-processing",
         )
 
     if abs(aod_val) > 0.05:
-        causes.append(
+        _add(
             f"Unequal odds: both true-positive and false-positive rates "
             f"differ across groups (AOD = {aod_val:+.4f}), indicating the "
-            f"model's errors are systematically distributed along group lines."
-        )
-        fixes.append(
+            f"model's errors are systematically distributed along group lines.",
             "Post-processing -- Equalized Odds "
             "(aif360.algorithms.postprocessing.EqOddsPostprocessing): "
             "adjust per-group classification thresholds after training to "
-            "equalize TPR and FPR across groups."
+            "equalize TPR and FPR across groups. Configure the cost constraint "
+            "parameter and validate that both groups' ROC curves are preserved. "
+            "Re-calibrate thresholds after each model update.",
+            stage="post-processing",
         )
 
     # ── general mitigation for borderline cases ────────────────────
     if is_borderline and not fixes:
-        fixes.append(
+        _add(
+            f"Borderline disparate impact detected (DI = {di_val:.4f}): the "
+            "model is close to the 0.8 threshold and warrants proactive monitoring.",
             "Post-processing -- Calibrated Equalized Odds "
             "(aif360.algorithms.postprocessing.CalibratedEqOddsPostprocessing): "
             "a minimal intervention that adjusts thresholds to bring DI above "
-            "the 0.8 threshold while preserving calibration."
+            "the 0.8 threshold while preserving calibration. Implement monthly "
+            "DI monitoring and trigger re-evaluation if DI drops below 0.85.",
+            stage="post-processing",
         )
 
     if is_biased and not fixes:
-        fixes.append(
+        _add(
+            f"Disparate impact detected (DI = {di_val:.4f}) with no specific "
+            "structural cause identified from available features.",
             "In-processing -- Adversarial Debiasing "
             "(aif360.algorithms.inprocessing.AdversarialDebiasing): "
             "train with an adversary network that prevents the classifier "
-            "from encoding protected-attribute information."
+            "from encoding protected-attribute information. Configure adversary "
+            "loss weight and validate demographic parity on a holdout set.",
+            stage="in-processing",
         )
 
     # ── if everything looks fair ───────────────────────────────────
@@ -354,11 +384,64 @@ def map_root_causes(
         )
         fixes.append(
             "Continue monitoring: fairness can drift as data distributions "
-            "change. Re-run this analysis periodically and after any "
-            "model retraining."
+            "change. Re-run this analysis after each model retraining and "
+            "set automated DI alerts if it drops below 0.90."
         )
+        cause_fix_mapping.append({
+            "cause_index": 1,
+            "cause_summary": causes[-1][:120],
+            "fix_summary": fixes[-1][:120],
+            "stage": "monitoring",
+        })
 
-    return {"causes": causes, "fixes": fixes}
+    # ── governance recommendations (always generated) ──────────────
+    governance: list[str] = [
+        "Periodic re-evaluation: re-run the full fairness audit after each "
+        "model retraining event or when the underlying data distribution changes "
+        "by more than 5% in protected-group composition.",
+        "Fairness dashboard: track DI, DPD, EOD, and AOD per protected attribute "
+        "in a real-time or nightly monitoring system; set automated alerts when "
+        "any metric breaches the audit threshold.",
+    ]
+    if any("Severe" in f or "fewer than" in f for f in imbalance_findings):
+        governance.append(
+            "Human-review queue: flag predictions for the underrepresented group "
+            "for manual inspection until all groups exceed n = 100 training records."
+        )
+    if is_biased or is_borderline:
+        governance.append(
+            "Compliance documentation: record the observed DI value, the selected "
+            "remediation intervention, expected improvement timeline, and re-audit "
+            "schedule in model governance logs before deployment."
+        )
+    governance.append(
+        "Intersectional analysis: after addressing per-attribute fairness, "
+        "conduct an intersectional audit (e.g., race × sex) to detect compounded "
+        "disparities not visible in single-attribute analyses."
+    )
+
+    # ── confidence assessment ──────────────────────────────────────
+    confidence = _assess_confidence(group_breakdown, di)
+
+    return {
+        "causes": causes,
+        "fixes": fixes,
+        "governance": governance,
+        "confidence": confidence,
+        "cause_fix_mapping": cause_fix_mapping,
+    }
+
+
+def _assess_confidence(group_breakdown: pd.DataFrame, di: float | None) -> str:
+    """Confidence level for the fairness assessment given sample sizes."""
+    if group_breakdown.empty:
+        return "LOW"
+    smallest_n = int(group_breakdown["n"].min())
+    if smallest_n < MIN_GROUP_SIZE:
+        return "LOW"
+    if smallest_n < 100:
+        return "MEDIUM"
+    return "HIGH"
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -542,6 +625,19 @@ def generate_qualitative_report(
             lines.append("No specific mitigations required at this time.")
         lines.append("")
 
+        # ── governance recommendations ─────────────────────────────
+        if root.get("governance"):
+            lines.append("### Governance and monitoring")
+            lines.append("")
+            for rec in root["governance"]:
+                lines.append(f"- {rec}")
+            lines.append("")
+
+        # ── assessment confidence ──────────────────────────────────
+        conf = root.get("confidence", "MEDIUM")
+        lines.append(f"*Assessment confidence: **{conf}** (based on group sample sizes)*")
+        lines.append("")
+
         if research_evidence_by_attr and research_evidence_by_attr.get(attr):
             lines.extend(format_evidence_markdown(research_evidence_by_attr[attr]))
 
@@ -660,6 +756,8 @@ def run_qualitative_analysis(
             protected_attrs=[attr],
             extra_queries=queries,
             max_papers=3,
+            causes=root["causes"],
+            fixes=root["fixes"],
         )
 
     report = generate_qualitative_report(

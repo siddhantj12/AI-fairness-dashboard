@@ -53,6 +53,26 @@ ALGORITHM_KEYWORDS = [
     "gridsearch",
     "thresholdoptimizer",
     "equalized odds",
+    "adversarial debiasing",
+    "fairness constraint",
+    "demographic parity constraint",
+]
+
+# Actionability: terms that indicate concrete, implementable steps
+ACTIONABILITY_KEYWORDS = [
+    "implement", "apply", "configure", "train with", "deploy",
+    "pipeline", "threshold", "parameter", "regularization",
+    "class_weight", "retrain", "cross-validation", "held-out",
+    "validation set", "schedule", "quarterly", "monthly", "annually",
+    "set ", "step ", "target n", "repair_level",
+]
+
+# Governance: terms that indicate monitoring, auditing, or policy compliance
+GOVERNANCE_KEYWORDS = [
+    "monitor", "audit", "review", "dashboard", "alert", "report",
+    "document", "compliance", "governance", "policy", "oversight",
+    "periodic", "quarterly", "annual", "log ", "track", "measure",
+    "re-audit", "re-evaluate", "drift", "flag", "intersectional",
 ]
 
 CAUSE_LABELS = {
@@ -62,6 +82,9 @@ CAUSE_LABELS = {
     "unequal opportunity": "unequal_opportunity",
     "unequal odds": "unequal_odds",
 }
+
+# Scoring rubric version tag — increment when rubric changes
+RUBRIC_VERSION = "v2"
 
 
 def build_context_and_baseline(
@@ -125,6 +148,8 @@ def build_context_and_baseline(
             protected_attrs=[attr],
             extra_queries=build_attribute_queries(dataset_name, attr, root["causes"], root["fixes"]),
             max_papers=3,
+            causes=root["causes"],
+            fixes=root["fixes"],
         )
         baseline_attrs.append({
             "attribute": attr,
@@ -149,18 +174,28 @@ def build_context_and_baseline(
 
 
 def build_score_summary(score: dict[str, Any]) -> str:
+    s = score["subscores"]
+    mit = s.get("mitigation_quality", s.get("mitigation_specificity", 0.0))
     return (
-        f"Total score: {score['total_score']:.1f}/100. "
-        f"Completeness={score['subscores']['completeness']:.1f}, "
-        f"Severity agreement={score['subscores']['severity_agreement']:.1f}, "
-        f"Cause alignment={score['subscores']['cause_alignment']:.1f}, "
-        f"Mitigation specificity={score['subscores']['mitigation_specificity']:.1f}, "
-        f"Research grounding={score['subscores']['research_grounding']:.1f}."
+        f"Total score: {score['total_score']:.1f}/100 [{RUBRIC_VERSION}]. "
+        f"Completeness={s['completeness']:.1f}/35, "
+        f"Severity agreement={s['severity_agreement']:.1f}/20, "
+        f"Cause alignment={s['cause_alignment']:.1f}/15, "
+        f"Mitigation quality={mit:.1f}/20, "
+        f"Research grounding={s['research_grounding']:.1f}/10."
     )
 
 
 def score_llm_output(result: dict[str, Any], baseline_payload: dict[str, Any]) -> dict[str, Any]:
-    """Score a qualitative LLM output against the deterministic baseline."""
+    """Score a qualitative LLM output against the deterministic baseline.
+
+    Rubric v2 (total = 100 pts):
+        Completeness        35 pts
+        Severity agreement  20 pts
+        Cause alignment     15 pts
+        Mitigation quality  20 pts  (algorithm 8 + actionability 6 + governance 6)
+        Research grounding  10 pts
+    """
     baseline_by_attr = {
         row["attribute"]: row for row in baseline_payload.get("attributes", [])
     }
@@ -171,29 +206,23 @@ def score_llm_output(result: dict[str, Any], baseline_payload: dict[str, Any]) -
     completeness = _score_completeness(result, expected_attrs=list(baseline_by_attr.keys()))
     severity_agreement = _score_severity(result_by_attr, baseline_by_attr)
     cause_alignment = _score_cause_alignment(result_by_attr, baseline_by_attr)
-    mitigation_specificity = _score_mitigation_specificity(result_by_attr)
+    mitigation_quality, mit_subscores = _score_mitigation_quality(result_by_attr)
     research_grounding = _score_research_grounding(result, result_by_attr)
 
-    total = completeness + severity_agreement + cause_alignment + mitigation_specificity + research_grounding
+    total = completeness + severity_agreement + cause_alignment + mitigation_quality + research_grounding
+    subscores = {
+        "completeness": round(completeness, 2),
+        "severity_agreement": round(severity_agreement, 2),
+        "cause_alignment": round(cause_alignment, 2),
+        "mitigation_quality": round(mitigation_quality, 2),
+        "mitigation_subscores": {k: round(v, 2) for k, v in mit_subscores.items()},
+        "research_grounding": round(research_grounding, 2),
+    }
     return {
         "total_score": round(total, 2),
-        "subscores": {
-            "completeness": round(completeness, 2),
-            "severity_agreement": round(severity_agreement, 2),
-            "cause_alignment": round(cause_alignment, 2),
-            "mitigation_specificity": round(mitigation_specificity, 2),
-            "research_grounding": round(research_grounding, 2),
-        },
-        "summary": build_score_summary({
-            "total_score": total,
-            "subscores": {
-                "completeness": completeness,
-                "severity_agreement": severity_agreement,
-                "cause_alignment": cause_alignment,
-                "mitigation_specificity": mitigation_specificity,
-                "research_grounding": research_grounding,
-            },
-        }),
+        "rubric_version": RUBRIC_VERSION,
+        "subscores": subscores,
+        "summary": build_score_summary({"total_score": total, "subscores": subscores}),
     }
 
 
@@ -216,24 +245,25 @@ def _normalize_severity(value: str) -> str:
 
 
 def _score_completeness(result: dict[str, Any], expected_attrs: list[str]) -> float:
+    """Completeness of reference audit spec and attribute coverage (max 35 pts)."""
     score = 0.0
     spec = result.get("reference_audit_spec", {})
     if spec.get("name"):
         score += 4
     if len(spec.get("core_metrics", [])) >= 4:
-        score += 8
+        score += 7
     if len(spec.get("required_response_elements", [])) >= 4:
-        score += 8
+        score += 7
     if spec.get("why_this_spec"):
         score += 5
     if len(spec.get("supporting_research", [])) >= 2:
-        score += 5
+        score += 4
 
     qualitative = result.get("qualitative", [])
     result_attrs = {row.get("attribute") for row in qualitative}
     if set(expected_attrs).issubset(result_attrs):
-        score += 10
-    return min(score, 40.0)
+        score += 8
+    return min(score, 35.0)
 
 
 def _score_severity(result_by_attr: dict[str, dict[str, Any]], baseline_by_attr: dict[str, dict[str, Any]]) -> float:
@@ -265,15 +295,42 @@ def _score_cause_alignment(result_by_attr: dict[str, dict[str, Any]], baseline_b
     return 15.0 * (matched / total)
 
 
-def _score_mitigation_specificity(result_by_attr: dict[str, dict[str, Any]]) -> float:
+def _score_mitigation_quality(
+    result_by_attr: dict[str, dict[str, Any]],
+) -> tuple[float, dict[str, float]]:
+    """Score mitigation quality across three dimensions (max 20 pts total).
+
+    Dimensions:
+        Algorithm specificity  8 pts — names a known fairness algorithm
+        Actionability          6 pts — contains concrete implementation steps
+        Governance             6 pts — includes monitoring / compliance language
+    """
     if not result_by_attr:
-        return 0.0
-    hits = 0
+        return 0.0, {"algorithm_specificity": 0.0, "actionability": 0.0, "governance": 0.0}
+
+    algo_hits = action_hits = gov_hits = 0
+    n = len(result_by_attr)
+
     for row in result_by_attr.values():
-        text = (row.get("how_to_fix", "") or "").lower().replace("-", "").replace("_", "")
-        if any(keyword.replace("-", "").replace("_", "") in text for keyword in ALGORITHM_KEYWORDS):
-            hits += 1
-    return 15.0 * (hits / max(len(result_by_attr), 1))
+        raw = (row.get("how_to_fix", "") or "").lower()
+        text_norm = raw.replace("-", "").replace("_", "")
+
+        if any(k.replace("-", "").replace("_", "") in text_norm for k in ALGORITHM_KEYWORDS):
+            algo_hits += 1
+        if any(k in raw for k in ACTIONABILITY_KEYWORDS):
+            action_hits += 1
+        if any(k in raw for k in GOVERNANCE_KEYWORDS):
+            gov_hits += 1
+
+    algo_score = 8.0 * (algo_hits / n)
+    action_score = 6.0 * (action_hits / n)
+    gov_score = 6.0 * (gov_hits / n)
+    total = algo_score + action_score + gov_score
+    return total, {
+        "algorithm_specificity": algo_score,
+        "actionability": action_score,
+        "governance": gov_score,
+    }
 
 
 def _score_research_grounding(result: dict[str, Any], result_by_attr: dict[str, dict[str, Any]]) -> float:
