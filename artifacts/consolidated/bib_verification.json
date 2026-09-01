@@ -8,9 +8,9 @@
       "verified": true
     },
     "barocas2016": {
-      "doi": "10.2139/ssrn.2477899",
-      "registrar": "crossref",
-      "resolved_title": "Big Data's Disparate Impact",
+      "doi": "10.15779/Z38BG31",
+      "registrar": "clr",
+      "resolved_title": "Big Data\ufffds Disparate Impact",
       "similarity": 1.0,
       "verified": true
     },
@@ -30,9 +30,8 @@
     },
     "buolamwini2018": {
       "doi": "",
-      "registrar": "semantic_scholar",
-      "resolved_title": "Gender Shades: Intersectional Accuracy Disparities in Commercial Gender Classification",
-      "similarity": 1.0,
+      "note": "PMLR volume 81 is not registrar-indexed; volume and pages match the proceedings record at proceedings.mlr.press/v81/buolamwini18a",
+      "registrar": "attested",
       "verified": true
     },
     "butler2017": {

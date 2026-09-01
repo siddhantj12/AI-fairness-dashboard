@@ -391,16 +391,20 @@
   verifynote   = {arXiv-only preprint with no DOI; Semantic Scholar record confirmed by title during bibliography construction},
 }
 
-% Known limitation of this record: the SSRN DOI is what the resolution gate
-% could verify, but the published version is California Law Review 104(3),
-% 671--732 (2016). Swap venue/volume/pages once registrar access allows the
-% Cal. L. Rev. DOI to be fetched and cached; do not swap from memory.
+% Published version. The Cal. L. Rev. DOI (10.15779/Z38BG31) resolves via
+% DataCite/doi.org content negotiation (not CrossRef search) to the Berkeley
+% lawcat record for Barocas & Selbst 2016; the resolution gate re-resolves
+% and caches it. Formerly cited via the SSRN record (10.2139/ssrn.2477899)
+% when registrar access could not reach the Cal. L. Rev. DOI.
 @article{barocas2016,
   author  = {Barocas, Solon and Selbst, Andrew D.},
   title   = {Big Data's Disparate Impact},
-  journal = {SSRN Electronic Journal},
+  journal = {California Law Review},
+  volume  = {104},
+  number  = {3},
+  pages   = {671--732},
   year    = {2016},
-  doi     = {10.2139/ssrn.2477899},
+  doi     = {10.15779/Z38BG31},
 }
 
 @article{wachter2021,
