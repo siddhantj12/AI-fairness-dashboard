@@ -69,7 +69,8 @@ and measures how often each one changes the verdict. Each is an instance of
 one underlying event: a construct someone intended (``favorable outcome,''
 ``the protected class,'' ``refusal'') is operationalised as something a
 program can compute, the two differ, and the output looks equally clean
-either way.
+either way. Every wrong verdict we measured erred in the same direction:
+toward the clean, reassuring reading.
 
 The settings live at three layers. In the metric library (verified directly
 in AIF360~0.6 and Fairlearn~0.13, and scoped to what we verified): one AIF360
@@ -93,8 +94,7 @@ sensitivity'' spread came from our own scorer penalising instructed brevity.
 The implication is that a fairness verdict is not a property of the model
 alone; it is a property of the model plus an unrecorded configuration. The
 same data honestly support ``worst-treated group at $0.67$,'' ``at $0.90$,''
-or ``unknowable,'' depending on choices no reader can see, and every wrong
-verdict we measured erred toward the clean, reassuring direction. An audit
+or ``unknowable,'' depending on choices no reader can see. An audit
 should therefore ship its configuration the way results ship error bars. We
 close with the six-item record that would accomplish this, and with
 appendices that print the full cell tables and a claim-by-claim map from
@@ -133,7 +133,21 @@ impact, intersectionality, lending, large language models}
 \section{Introduction}
 \label{sec:intro}
 
-Credit decisions are among the most consequential automated decisions people
+A fairness verdict is not a property of a model alone. It is a property of
+the model plus a configuration: which outcome counts as favorable, who
+counts as protected, whom a disparity is measured against, how much evidence
+the number rests on, and which instruments check the audit's own components.
+None of those settings appear in the audit's output, and each is an instance
+of one underlying event: the construct a fairness instrument is \emph{named
+for} differs from the construct it actually \emph{operationalises}
+\citep{jacobswallach2021}, the output is clean either way, and nothing
+records the substitution. This paper measures how often each such setting
+changes the verdict, and one measured regularity makes the gap dangerous
+rather than merely untidy: every wrong verdict erred in the same direction,
+toward the clean, reassuring reading.
+
+Lending is the right place to make that measurement. Credit decisions are
+among the most consequential automated decisions people
 encounter, and two of them dominate household outcomes: consumer installment
 credit, which governs access to short-term liquidity, and residential mortgage
 origination, which governs access to the principal asset most households will
@@ -142,13 +156,11 @@ fair AI that fairness is defined relative to a human decision context rather
 than in metric space. Lending's decision context is unusually well
 documented: the mortgage data are published for public audit, the protected
 categories come with written definitions, and the datasets themselves ship the
-flags those definitions turn on. That is what makes lending the right place to
-measure a gap that is usually unmeasurable: the gap between the construct a
-fairness instrument is \emph{named for} and the construct it actually
-\emph{operationalises} \citep{jacobswallach2021}.
+flags those definitions turn on. That is what turns the gap between named and
+operationalised construct from something arguable into something measurable.
 
-This paper's claim is that the gap appears at every layer of an audit, that it
-takes the same shape at each layer, and that it is invisible in the output.
+The gap appears at every layer of an audit, takes the same shape at each
+layer, and is invisible in the output.
 The layers are: the metric library, whose defaults resolve normative questions
 no caller answered; the mapping from attribute to construct, where the
 quantity computed and the quantity the audit's readers care about part

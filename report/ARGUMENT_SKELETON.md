@@ -27,25 +27,31 @@ layer is enough — the inventory table does the rest.
 
 ## 1. Introduction
 
-**¶1 (lending as the site).**
-- Lending is where the named-vs-operationalised gap becomes *measurable*
-  rather than arguable: the domain ships written definitions and dedicated
-  flags.
+**¶1 (the bottom line, stated first).**
+- A fairness verdict is a property of the model *plus* an unrecorded
+  configuration; every configuration setting is the same event (named ≠
+  operationalised, output clean, substitution unrecorded).
+- Every wrong verdict measured erred toward the clean, reassuring reading —
+  the asymmetry that makes the gap dangerous.
+
+**¶2 (lending as the site).**
+- Lending is where the gap becomes *measurable* rather than arguable: the
+  domain ships written definitions and dedicated flags.
 - (Keep one framing citation; the Lee et al. sentence can compress to a
   clause.)
 
-**¶2 (the claim).**
+**¶3 (the layers).**
 - The gap appears at every layer, takes the same shape at each, and is
   invisible in the output.
 - Table 1 *is* the paper: every instance, named construct, operationalisation,
   clean number.
 
-**¶3 (positioning).**
+**¶4 (positioning).**
 - Prior work already shows instruments and pipelines are part of the finding;
   our addition is a setting where the gap can be measured against published
   definitions.
 
-**¶4 (contributions).**
+**¶5 (contributions).**
 - Five contributions, one clause each, each pointing at a section. Already
   tight; keep.
 

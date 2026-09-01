@@ -121,3 +121,17 @@ artifacts/**/.DS_Store
 # Built papers ARE deliverables, so they override the blanket *.pdf ignore
 # above. Intermediates stay ignored by the rules just listed.
 !report/*.pdf
+
+# The paper's artifact map (scripts/artifact_map.py) references
+# hmda_dataset/metrics/out_of_fold_metrics.json, and
+# tests/test_artifact_map.py asserts it exists — so it must ship with the
+# repo, not just live on the machine that generated it. gitignore cannot
+# re-include a file whose parent directory is excluded, hence the
+# three-step carve-out. IMPORTANT: commit only the ORIGINAL file from the
+# machine that produced the committed fairness artifacts; regenerating it
+# elsewhere yields different predictions (RF out-of-fold results vary by
+# environment even at pinned versions and seed 42) and would silently
+# invalidate every downstream HMDA number in the paper.
+!hmda_dataset/metrics/
+hmda_dataset/metrics/*
+!hmda_dataset/metrics/out_of_fold_metrics.json
