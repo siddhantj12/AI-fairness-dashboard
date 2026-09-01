@@ -99,11 +99,16 @@
   doi     = {10.3368/jhr.46.1.53},
 }
 
+% Year corrected 2019 -> 2022: the DOI below is the published JFE article
+% (vol. 143, no. 1, 2022); 2019 was the working-paper year, which mis-dated
+% the publication the DOI resolves to.
 @article{bartlett2019,
   author  = {Bartlett, Robert P. and Morse, Adair and Stanton, Richard and Wallace, Nancy},
   title   = {Consumer-lending discrimination in the {FinTech} Era},
   journal = {Journal of Financial Economics},
-  year    = {2019},
+  volume  = {143},
+  number  = {1},
+  year    = {2022},
   doi     = {10.1016/j.jfineco.2021.05.047},
 }
 
@@ -360,7 +365,11 @@
   booktitle = {Proceedings of the 1st Conference on Fairness, Accountability and
                Transparency},
   series    = {Proceedings of Machine Learning Research},
+  volume    = {81},
+  pages     = {77--91},
   year      = {2018},
+  verifynote = {PMLR volume 81 is not registrar-indexed; volume and pages
+                match the proceedings record at proceedings.mlr.press/v81/buolamwini18a},
 }
 
 @inproceedings{foulds2020,
@@ -382,6 +391,10 @@
   verifynote   = {arXiv-only preprint with no DOI; Semantic Scholar record confirmed by title during bibliography construction},
 }
 
+% Known limitation of this record: the SSRN DOI is what the resolution gate
+% could verify, but the published version is California Law Review 104(3),
+% 671--732 (2016). Swap venue/volume/pages once registrar access allows the
+% Cal. L. Rev. DOI to be fetched and cached; do not swap from memory.
 @article{barocas2016,
   author  = {Barocas, Solon and Selbst, Andrew D.},
   title   = {Big Data's Disparate Impact},

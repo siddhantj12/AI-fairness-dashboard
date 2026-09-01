@@ -12,6 +12,13 @@
 % artifact-first framing; shares refs.bib and all numbers). Numbers changed
 % here must be propagated there.
 %
+% Structure (FAccT-standard scaffold, 2026-09 restructure): Introduction /
+% Related Work / Methods / Results (the three layers plus measurement
+% validity, as subsections) / Discussion / Recommendations / Limitations /
+% Conclusion. Section labels (sec:library, sec:statute, ...) were kept
+% through the restructure, so cross-references and the companion docs
+% (ARGUMENT_SKELETON.md, PAPER_MAP.md in this directory) remain stable.
+%
 % Every number in this paper traces to a regenerable artifact; appendix G maps
 % claim -> artifact -> command, and tests/test_artifact_map.py asserts the
 % artifacts exist. Tables under report/generated/ are emitted by scripts and
@@ -253,7 +260,7 @@ artifact of how our scorer treats terse output (\S\ref{sec:instruments}).
 the minimal reproduction, and a claim-by-claim artifact map enforced by a
 test suite (appendices~\ref{app:cells}--\ref{app:map}).
 
-\section{Background: three kinds of named construct}
+\section{Related Work}
 \label{sec:background}
 
 \paragraph{Measurement.} \citet{jacobswallach2021} supply the vocabulary this
@@ -290,16 +297,6 @@ protected attribute directly is a documented property of its inputs
 (\citet{gillis2022} examines input scrutiny at length), and no outcome-rate
 metric reports it (\S\ref{sec:treatment}).
 
-One convention in this paper is itself an imported construct, and we label it
-rather than launder it. The four-fifths screen originated in US employment
-guidance, not in credit; we retain $0.80$ because it is the de facto screening
-convention in fairness practice, we use it only as a screen, and we note that
-the guidance's own text contains the caveat our \S\ref{sec:validity}
-quantifies: greater differences ``may not constitute adverse impact where the
-differences are based on small numbers and are not statistically
-significant.'' The screen's own source anticipates the failure mode this
-paper measures.
-
 \paragraph{The audit's instruments.} The third layer is newer but not new.
 LLM-as-judge evaluation is known to be fragile \citep{zheng2023};
 \citet{wester2024} study how models deny requests, the construct our
@@ -319,10 +316,11 @@ apparatus resolves several such questions before anyone is asked, at layers
 where nobody thinks to look. \citet{zamfirescu2022} diagnose human error
 inside an analysis pipeline; we diagnose the pipeline's own rulers.
 
-\section{Apparatus}
+\section{Methods}
 \label{sec:apparatus}
 
-\paragraph{Settings.} Two regulated lending decisions and one instrument-test
+\subsection{Settings and data}
+Two regulated lending decisions and one instrument-test
 setting. German Credit \citep{germancredit} stands in for consumer installment
 credit: $1{,}000$ applications of 1990s German data, a structural analogue
 from a different market and era, from which we draw no US conclusion. HMDA
@@ -337,7 +335,8 @@ instrument findings (\S\ref{sec:instruments}) surfaced there; nothing in this
 paper treats it as a lending sector. Lending discrimination itself is
 documented across this span \citep{duarte2012,pope2011,bartlett2019,butler2017,sarwal2024}.
 
-\paragraph{Deterministic layer.} A pipeline computes disparate impact with
+\subsection{Deterministic metric layer}
+A pipeline computes disparate impact with
 AIF360 \citep{aif360}, cross-checked against Fairlearn \citep{fairlearn}, and
 assigns severity labels by a fixed rule. The per-attribute summary the
 downstream layers receive carries three fields (\texttt{DisparateImpact},
@@ -353,7 +352,8 @@ scored out-of-fold by stratified five-fold cross-validation (random forest,
 accuracy $0.8002$, AUC $0.8018$ on HMDA), so audits run over all $10{,}978$
 and $1{,}000$ rows rather than a held-out split.
 
-\paragraph{Interpretation layer.} A language model interprets the computed
+\subsection{LLM interpretation layer}
+A language model interprets the computed
 metrics and never recomputes one; scoring is against the deterministic label,
 never another model's opinion, with one disclosed exception
 (\S\ref{sec:capability}). Track~Q issues four frozen prompt strategies per
@@ -363,7 +363,8 @@ mechanical checks. Prompt builders, detectors, severity rule and rubric are
 printed verbatim in appendix~\ref{app:instruments}; a no-key replay path
 reproduces all scoring.
 
-\paragraph{Population construction.} The HMDA file begins at $20{,}000$ rows
+\subsection{Population construction}
+The HMDA file begins at $20{,}000$ rows
 and the audit runs on $10{,}978$: an attrition of $45.1\%$ that includes
 dropping \texttt{Race Not Available} ($4{,}140$ rows, $20.7\%$ of the file),
 joint applications, and free-form race text. That is selection on the
@@ -373,7 +374,27 @@ with the disparate-impact ratios recomputed with the dropped categories
 retained. HMDA's public data carry no credit score, the primary underwriting
 variable.
 
-\section{Layer one: what the library operationalises}
+\subsection{The four-fifths screen}
+One convention in this paper is itself an imported construct, and we label it
+rather than launder it. The four-fifths screen originated in US employment
+guidance, not in credit; we retain $0.80$ because it is the de facto screening
+convention in fairness practice, we use it only as a screen, and we note that
+the guidance's own text contains the caveat our \S\ref{sec:validity}
+quantifies: greater differences ``may not constitute adverse impact where the
+differences are based on small numbers and are not statistically
+significant.'' The screen's own source anticipates the failure mode this
+paper measures.
+
+\section{Results}
+\label{sec:results}
+
+Results are ordered by layer, following Table~\ref{tab:inventory}: the metric
+library (\S\ref{sec:library}), the mapping from attribute to documented
+construct (\S\ref{sec:statute}), the statistical validity of what either
+layer reports (\S\ref{sec:validity}), and the audit's own instruments
+(\S\ref{sec:instruments}).
+
+\subsection{Layer one: what the library operationalises}
 \label{sec:library}
 
 \emph{Construct named: ``favorable outcome,'' ``disparate impact.''
@@ -424,10 +445,10 @@ measures what its absence costs.
 denominator, and neither library's output records which group supplied it.
 \S\ref{sec:reference} shows the choice moves every number in our tables.
 
-\section{Layer two: what the documented construct defines}
+\subsection{Layer two: what the documented construct defines}
 \label{sec:statute}
 
-\subsection{The protected-class boundary}
+\subsubsection{The protected-class boundary}
 \label{sec:age}
 
 \emph{Construct named: age, as the lending domain defines the protected
@@ -456,7 +477,7 @@ $0.80$ screen and the pipeline's \texttt{BiasFlag} remains false on both cuts:
 the boundary changes which question the number answers, not the verdict on
 this data.
 
-\subsection{The comparator}
+\subsubsection{The comparator}
 \label{sec:reference}
 
 \emph{Construct named: disparity against the favoured. Operationalised as: a
@@ -474,7 +495,7 @@ conventions), and \S\ref{sec:subsample} shows the choice also changes how
 often an audit is \emph{wrong}, because a data-dependent reference is itself
 re-estimated in every sample.
 
-\subsection{The inputs the metric cannot see}
+\subsubsection{The inputs the metric cannot see}
 \label{sec:treatment}
 
 \emph{Construct named: discrimination. Operationalised as: outcome-rate
@@ -493,10 +514,10 @@ sample size, under any convention, could have flagged it. Input scrutiny
 and outcome scrutiny are different measurements \citep{gillis2022}, and a
 toolchain that computes only the second says nothing about the first.
 
-\section{Measurement validity: what the number can support}
+\subsection{Measurement validity: what the number can support}
 \label{sec:validity}
 
-\subsection{Intervals on the real audit}
+\subsubsection{Intervals on the real audit}
 \label{sec:intervals}
 
 Our audit originally ran on a held-out split of $2{,}196$ mortgage
@@ -545,7 +566,7 @@ table under two further reference conventions.}
 \input{generated/appendix_a_hmda_max_rate_floor}
 \end{table}
 
-\subsection{The subsampling study}
+\subsubsection{The subsampling study}
 \label{sec:subsample}
 
 The anecdote above is one draw from a distribution, so we measured the
@@ -614,7 +635,7 @@ for a bias that points, in this data, toward clearance. The choice among them
 is a policy about who becomes visible, and nothing in a reported ratio records
 which policy produced it.
 
-\section{Layer three: what the audit's own instruments operationalise}
+\subsection{Layer three: what the audit's own instruments operationalise}
 \label{sec:instruments}
 
 The findings in this section are about our released harness, measured on
@@ -624,7 +645,7 @@ about the field. They are in this paper because they are the same finding as
 construct, computing another, cleanly. Appendix~\ref{app:instruments} prints
 every implementation verbatim.
 
-\subsection{``Refusal'' := fewer than 40 characters}
+\subsubsection{``Refusal'' := fewer than 40 characters}
 \label{sec:refusal}
 
 \emph{Construct named: refusal to answer \citep{wester2024}. Operationalised
@@ -659,7 +680,7 @@ provider was recorded as permanently blocked in our guardrail configuration,
 where the block persists. An invalid measurement did not merely mislead a
 table; it produced a durable governance decision about a vendor.
 
-\subsection{``Fabrication'' := a float literal absent from context}
+\subsubsection{``Fabrication'' := a float literal absent from context}
 \label{sec:fabrication}
 
 \emph{Construct named: asserting numbers that were never provided.
@@ -678,7 +699,7 @@ ranked as the less trustworthy one, precisely because it shows its work. The
 seven values that are not derivable ($19.9$ three times, $5.3$ four times)
 remain honest fabrication candidates, and we report them as such.
 
-\subsection{``Mitigation'' := a canonical algorithm name}
+\subsubsection{``Mitigation'' := a canonical algorithm name}
 \label{sec:mitigation}
 
 \emph{Construct named: a specific, actionable remedy. Operationalised as: a
@@ -693,7 +714,7 @@ repairs a six-record subgroup. The gate encodes an assumption that every
 fairness problem has an algorithmic mitigation, and where that is false it
 penalises the only defensible answer.
 
-\subsection{Our own thresholds, same class}
+\subsubsection{Our own thresholds, same class}
 \label{sec:ownthresholds}
 
 \emph{Construct named: severity. Operationalised as: fixed cuts at $0.72$ and
@@ -713,7 +734,7 @@ $0.80$ screen plus intervals, and quotes the pipeline's band labels as
 pipeline convention rather than as findings. The code is left as implemented;
 the exhibit is the point.
 
-\subsection{Scores that operationalise ``capability''}
+\subsubsection{Scores that operationalise ``capability''}
 \label{sec:capability}
 
 \emph{Construct named: how good the model layer is. Operationalised as: mean
@@ -771,7 +792,7 @@ parameter outright, so a repeated-sampling study is impossible on it, an
 API constraint that silently determines which experiments a benchmark can
 run.)
 
-\section{Why the gap is invisible}
+\section{Discussion: why the gap is invisible}
 \label{sec:invisible}
 
 The layer-one findings hold for anyone using the verified libraries; the rest
@@ -818,7 +839,7 @@ only interpretation, scoring runs against the numbers) protected every
 is the reason we can state which of our results were artifacts, and it is no
 defence against choosing the wrong construct in the first place.
 
-\section{What an audit would have to record}
+\section{Recommendations: what an audit must record}
 \label{sec:protocol}
 
 Each item follows from a measured failure above; together they are the
@@ -863,7 +884,7 @@ analyses of pricing and of less discriminatory alternatives, none of which a
 disparity ratio addresses. We perform the screening step only. Anyone citing
 this protocol as evidence of compliance is misusing it.
 
-\section{What this does not show}
+\section{Limitations}
 \label{sec:limitations}
 
 \textbf{Scale.} Two lending datasets, one geography and era each, two
