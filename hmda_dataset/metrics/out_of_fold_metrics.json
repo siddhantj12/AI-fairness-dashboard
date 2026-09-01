@@ -1,0 +1,15 @@
+{
+  "n_rows": 10978,
+  "n_folds": 5,
+  "seed": 42,
+  "note": "Out-of-fold predictions over the full cleaned analytic sample. Every row is scored by a model fitted without it. Dataset-local *_metrics.json files are train/test-split diagnostics, not paper inputs.",
+  "models": {
+    "random_forest": {
+      "accuracy": 0.8002,
+      "precision": 0.8272,
+      "recall": 0.9121,
+      "f1": 0.8676,
+      "auc": 0.8018
+    }
+  }
+}
