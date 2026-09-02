@@ -4,7 +4,7 @@
 Single source of truth: the LaTeX table is emitted from MAP (run this file),
 and tests/test_artifact_map.py asserts every artifact path exists. Two
 headline numbers were once published with no artifact behind them and both
-were wrong; this file is the control that prevents a third.
+were wrong; this file is the control that makes a third detectable.
 
 Each row: (claim, artifact path relative to repo root, regenerating command).
 """
@@ -47,7 +47,7 @@ MAP: list[tuple[str, str, str]] = [
         "python3.11 scripts/compare_populations.py",
     ),
     (
-        "Subsampling rates (Fig. 1, Table 3, subsampling appendix): false clearance 83.8% point / 95.2% EB; floors 100% wrong worst cell; Wilson abstains 90.3% (m=2196)",
+        "Subsampling rates (Fig. 1, Table 3, subsampling appendix): false clearance 83.8% point / 100.0% EB; floors 100% wrong worst cell; Wilson abstains 90.3% (m=2196)",
         "artifacts/consolidated/subsample_study.json",
         "python3.11 scripts/subsample_study.py",
     ),

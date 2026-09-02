@@ -1,0 +1,50 @@
+# How to check every number in the FAccT paper, in one sitting.
+# Nothing here retrains a model. That is deliberate: see `do_not`.
+
+paper:
+  source: report/report_facct.tex
+  build: make paper-facct
+
+verify_everything:
+  one_command: jupyter nbconvert --to notebook --execute notebooks/reproduce_facct_numbers.ipynb
+  what_it_does: >
+    Re-derives every recomputable headline number (Wilson intervals, DI
+    ratios, four-fifths flags, attrition shares) from the committed
+    artifacts and asserts the rest match the paper. 38 checks; the
+    notebook fails loudly if any number drifts.
+
+do_not:
+  - do not re-run train_models.py to "reproduce" the paper.
+    Out-of-fold predictions differ across environments even at pinned
+    versions and seed 42 (observed: acc 0.7982 vs 0.8002). The frozen
+    scoring artifact is hmda_dataset/metrics/out_of_fold_metrics.json;
+    reproduction for that layer means matching it, not regenerating it.
+  - do not edit report/generated/*.tex by hand; each file is emitted by
+    the script named in its header.
+
+frozen_environment:  # the machine that produced the scoring artifact
+  python: 3.11.14
+  scikit-learn: 1.8.0
+  numpy: 2.4.4
+  pandas: 3.0.2
+  os: macOS 26.5.1, Apple M3 (arm64)
+
+headline_numbers:  # claim -> artifact that backs it
+  - "AIF360 default DI 1.2072 vs oriented 0.9862":
+      artifacts/consolidated/aif360_default_repro.txt
+  - "worst cell 0.6734 moves to 0.7012 under a White x Male reference":
+      artifacts/consolidated/interval_estimates.json
+  - "6 of 12 race x sex cells indeterminate at full population":
+      artifacts/consolidated/interval_estimates.json
+  - "banded age 0.9791 vs ECOA age-62+ cut 0.8897, both clear the screen":
+      artifacts/hmda/fairness/fairness_summary.json
+  - "point estimates false-clear 83.8% of draws at m=2196":
+      artifacts/consolidated/subsample_study.json
+  - "Wilson abstains 90.3%; EB false-clears 100.0%; floors misrank 100%":
+      artifacts/consolidated/subsample_study.json
+  - "20,000 raw rows -> 10,978; Race Not Available drops 4,140 (20.7%)":
+      artifacts/consolidated/population_attrition.json
+  - "RF out-of-fold acc 0.8002 / AUC 0.8018, 5-fold, seed 42":
+      hmda_dataset/metrics/out_of_fold_metrics.json
+
+full_map: report/generated/artifact_map.tex  # every claim, from scripts/artifact_map.py
